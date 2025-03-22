@@ -5,72 +5,145 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Customer Support Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .chat-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        h2 {
+            margin: 0;
+            padding: 15px;
+            background: #007bff;
+            color: white;
+            text-align: center;
+        }
+        #chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 75%;
+        }
+        .agent-message {
+            background: #007bff;
+            color: white;
+            align-self: flex-end;
+        }
+        .customer-message {
+            background: #e9ecef;
+            color: #333;
+            align-self: flex-start;
+        }
+        #message-inputs {
+            display: flex;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #ccc;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-left: 5px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    <h2>Customer Support Chat (Agent)</h2>
+    <div class="chat-container">
+        <h2>Customer Support Chat (Agent)</h2>
+        <!-- Chat Box -->
+        <div id="chat-box">
+            {% for msg in messages %}
+                <div class="message {% if msg.sender == 'Agent' %}agent-message{% else %}customer-message{% endif %}">
+                    <b>{{ msg.sender }}:</b> {{ msg.message_content }}
+                </div>
+            {% empty %}
+                <p>No messages yet.</p>
+            {% endfor %}
+        </div>
 
-    <!-- Chat Box -->
-    <div id="chat-box" style="border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin-top: 20px; padding: 10px;">
-        {% for msg in messages %}
-            <p><b>{{ msg.sender }}:</b> {{ msg.message_content }}</p>
-        {% empty %}
-            <p>No messages yet.</p>
-        {% endfor %}
+        <!-- Message Input -->
+        <div id="message-inputs">
+            <input type="text" id="recipient" placeholder="Recipient Number (e.g., +1234567890)">
+            <input type="text" id="message" placeholder="Type a message">
+            <button onclick="sendMessage()">Send</button>
+        </div>
     </div>
 
-    <!-- Message Input -->
-    <input type="text" id="recipient" placeholder="Recipient Number (e.g., +1234567890)">
-    <input type="text" id="message" placeholder="Type a message">
-    <button onclick="sendMessage()">Send</button>
-
     <script>
-        // === WebSocket Connection ===
-        let socket = new WebSocket("ws://localhost:8000/ws/chat/");
+        const socketUrl = "wss://18e4-37-245-152-150.ngrok-free.app/ws/chat/";
+        let socket = new WebSocket(socketUrl);
 
         socket.onopen = () => console.log("WebSocket Connected");
-
-        // Receive Messages (From WhatsApp) and Show in Chat Box
-        socket.onmessage = function(event) {
+        socket.onmessage = function (event) {
             const data = JSON.parse(event.data);
-            const chatBox = document.getElementById("chat-box");
-            chatBox.innerHTML += `<p><b>${data.sender}:</b> ${data.message}</p>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
+            addMessageToChatBox(data.sender, data.message);
+        };
+        socket.onerror = (error) => console.error("WebSocket Error:", error);
+        socket.onclose = () => {
+            console.log("WebSocket Closed. Reconnecting...");
+            setTimeout(() => socket = new WebSocket(socketUrl), 1000);
         };
 
-        socket.onerror = (error) => console.error("WebSocket Error:", error);
-        socket.onclose = () => console.log("WebSocket Closed");
+        function addMessageToChatBox(sender, message) {
+            const chatBox = document.getElementById("chat-box");
+            const messageClass = sender === "Agent" ? "agent-message" : "customer-message";
+            const newMessage = `<div class="message ${messageClass}"><b>${sender}:</b> ${message}</div>`;
+            chatBox.innerHTML += newMessage;
+            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll
+        }
 
-        // === Send Agent's Message ===
         function sendMessage() {
             const message = document.getElementById("message").value;
             const recipient = document.getElementById("recipient").value;
-            
+
             if (!recipient) {
                 alert("Recipient number is required!");
                 return;
             }
 
-            if (socket && message) {
-                // Send message to WebSocket for real-time chat
+            if (socket.readyState === WebSocket.OPEN && message) {
                 socket.send(JSON.stringify({ sender: "Agent", message: message }));
-                
-                // Send message to WhatsApp via Django endpoint
+
                 fetch('/chat/send-message/', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sender: "Agent",
                         recipient: recipient,
                         message: message
                     })
-                })
-                .then(response => response.json())
-                .then(data => console.log("WhatsApp Message Status:", data))
-                .catch(error => console.error("Error sending WhatsApp message:", error));
-                
-                // Clear message input
+                }).then(response => response.json())
+                  .then(data => console.log("WhatsApp Message Status:", data))
+                  .catch(error => console.error("Error sending WhatsApp message:", error));
+
                 document.getElementById("message").value = "";
             } else {
                 alert("Connection error or empty message!");
