@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    "daphne",  # Required for WebSockets
+    "daphne",  # fr WbSockets
     'django.contrib.staticfiles',
     "channels",
     "rest_framework",
@@ -79,7 +79,7 @@ ROOT_URLCONF = 'custmr_sprt.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        "DIRS": [os.path.join(BASE_DIR, "templates")],  # Global templates folder
+        "DIRS": [os.path.join(BASE_DIR, "templates")],  
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -100,8 +100,7 @@ TWILIO_WHATSAPP_NUMBER = "whatsapp:+14155238886"
 WSGI_APPLICATION = 'custmr_sprt.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
+
 
 DATABASES = {
     'default': {
@@ -111,8 +110,6 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
