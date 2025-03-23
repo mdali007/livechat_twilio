@@ -78,7 +78,6 @@
 <body>
     <div class="chat-container">
         <h2>Customer Support Chat (Agent)</h2>
-        <!-- Chat Box -->
         <div id="chat-box">
             {% for msg in messages %}
                 <div class="message {% if msg.sender == 'Agent' %}agent-message{% else %}customer-message{% endif %}">
@@ -89,7 +88,6 @@
             {% endfor %}
         </div>
 
-        <!-- Message Input -->
         <div id="message-inputs">
             <input type="text" id="recipient" placeholder="Recipient Number (e.g., +1234567890)">
             <input type="text" id="message" placeholder="Type a message">
@@ -98,57 +96,67 @@
     </div>
 
     <script>
-        const socketUrl = "wss://18e4-37-245-152-150.ngrok-free.app/ws/chat/";
-        let socket = new WebSocket(socketUrl);
+       const socketUrl = "ws://18e4-37-245-152-150.ngrok-free.app/ws/chat/";
+let socket = new WebSocket(socketUrl);
 
-        socket.onopen = () => console.log("WebSocket Connected");
-        socket.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            addMessageToChatBox(data.sender, data.message);
-        };
-        socket.onerror = (error) => console.error("WebSocket Error:", error);
-        socket.onclose = () => {
-            console.log("WebSocket Closed. Reconnecting...");
-            setTimeout(() => socket = new WebSocket(socketUrl), 1000);
-        };
+socket.onopen = () => {
+    console.log("WebSocket Connected");
+};
 
-        function addMessageToChatBox(sender, message) {
-            const chatBox = document.getElementById("chat-box");
-            const messageClass = sender === "Agent" ? "agent-message" : "customer-message";
-            const newMessage = `<div class="message ${messageClass}"><b>${sender}:</b> ${message}</div>`;
-            chatBox.innerHTML += newMessage;
-            chatBox.scrollTop = chatBox.scrollHeight;  // Auto-scroll
-        }
+socket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    console.log("Received message:", data);
+    addMessageToChatBox(data.sender, data.message);
+};
 
-        function sendMessage() {
-            const message = document.getElementById("message").value;
-            const recipient = document.getElementById("recipient").value;
+socket.onerror = (error) => {
+    console.error("WebSocket Error:", error);
+};
 
-            if (!recipient) {
-                alert("Recipient number is required!");
-                return;
-            }
+socket.onclose = () => {
+    console.log("WebSocket Closed. Reconnecting...");
+    setTimeout(() => {
+        socket = new WebSocket(socketUrl);
+    }, 1000);
+};
 
-            if (socket.readyState === WebSocket.OPEN && message) {
-                socket.send(JSON.stringify({ sender: "Agent", message: message }));
+function addMessageToChatBox(sender, message) {
+    const chatBox = document.getElementById("chat-box");
+    const messageClass = sender === "Agent" ? "agent-message" : "customer-message";
+    const newMessage = `<div class="message ${messageClass}"><b>${sender}:</b> ${message}</div>`;
+    chatBox.innerHTML += newMessage;
+    chatBox.scrollTop = chatBox.scrollHeight; 
+}
 
-                fetch('/chat/send-message/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sender: "Agent",
-                        recipient: recipient,
-                        message: message
-                    })
-                }).then(response => response.json())
-                  .then(data => console.log("WhatsApp Message Status:", data))
-                  .catch(error => console.error("Error sending WhatsApp message:", error));
+function sendMessage() {
+    const message = document.getElementById("message").value;
+    const recipient = document.getElementById("recipient").value;
 
-                document.getElementById("message").value = "";
-            } else {
-                alert("Connection error or empty message!");
-            }
-        }
+    if (!recipient) {
+        alert("Recipient number is required!");
+        return;
+    }
+
+    if (socket.readyState === WebSocket.OPEN && message) {
+        socket.send(JSON.stringify({ sender: "Agent", message: message }));
+
+        fetch('/chat/send-message/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: "Agent",
+                recipient: recipient,
+                message: message
+            })
+        }).then(response => response.json())
+          .then(data => console.log("WhatsApp Message Status:", data))
+          .catch(error => console.error("Error sending WhatsApp message:", error));
+
+        document.getElementById("message").value = "";
+    } else {
+        alert("Connection error or empty message!");
+    }
+}
     </script>
 </body>
 </html>
