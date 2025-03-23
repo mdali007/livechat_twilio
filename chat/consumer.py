@@ -5,7 +5,7 @@ from asgiref.sync import sync_to_async
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_group_name = "chat"  # Match the group name in the webhook
+        self.room_group_name = "chat"  
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
@@ -16,9 +16,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         sender = data["sender"]
         message_content = data["message"]
-        status = data.get("status", "sent")  # Default status to 'sent' if not provided
+        status = data.get("status", "sent") 
 
-        # Save message to the database asynchronously with the correct status
+        # Save message to the db
         message = await self.save_message(sender, message_content, status)
 
         # Send message to group instantly with status
@@ -28,7 +28,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "type": "chat_message",
                 "message": message_content,
                 "sender": sender,
-                "status": message.status  # Use status from the saved message
+                "status": message.status  
             }
         )
 
